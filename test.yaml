@@ -3,3 +3,4 @@ postgres:
   port: 5432
   user: tao
   password: 123456qwe
+  db: test

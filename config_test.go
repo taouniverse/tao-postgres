@@ -1,4 +1,4 @@
-// Copyright 2022 huija
+// Copyright 2021-2026 huija
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,15 +15,35 @@
 package postgres
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/taouniverse/tao"
 )
 
 func TestConfig(t *testing.T) {
-	p := new(Config)
+	p := &Config{
+		BaseMultiConfig: tao.BaseMultiConfig[InstanceConfig]{
+			Instances: map[string]InstanceConfig{
+				"default": {},
+			},
+		},
+	}
 	p.ValidSelf()
-	assert.EqualValues(t, p, defaultPostgres)
+
+	instance := p.Instances["default"]
+	assert.Equal(t, "localhost", instance.Host)
+	assert.Equal(t, 5432, instance.Port)
+	assert.Equal(t, "tao", instance.User)
 
 	t.Log(p.RunAfter())
 	t.Log(p.ToTask())
+}
+
+func TestConfigDefaultInstanceName(t *testing.T) {
+	c := &Config{}
+	assert.Equal(t, "default", c.GetDefaultInstanceName())
+
+	c.Default = "master"
+	assert.Equal(t, "master", c.GetDefaultInstanceName())
 }

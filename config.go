@@ -1,4 +1,4 @@
-// Copyright 2022 huija
+// Copyright 2021-2026 huija
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,87 +16,97 @@ package postgres
 
 import (
 	"context"
+
 	"github.com/taouniverse/tao"
 )
 
 // ConfigKey for this repo
 const ConfigKey = "postgres"
 
-// Config implements tao.Config
-type Config struct {
-	Host      string   `json:"host"`
-	Port      int      `json:"port"`
-	User      string   `json:"user"`
-	Password  string   `json:"password"`
-	DB        string   `json:"db"`
-	SSL       string   `json:"ssl"`
-	TimeZone  string   `json:"time_zone"`
-	RunAfters []string `json:"run_after,omitempty"`
+// InstanceConfig 单实例配置
+type InstanceConfig struct {
+	Host     string `json:"host" yaml:"host"`
+	Port     int    `json:"port" yaml:"port"`
+	User     string `json:"user" yaml:"user"`
+	Password string `json:"password" yaml:"password"`
+	DB       string `json:"db" yaml:"db"`
+	SSL      string `json:"ssl" yaml:"ssl"`
+	TimeZone string `json:"time_zone" yaml:"time_zone"`
 }
 
-var defaultPostgres = &Config{
-	Host:      "localhost",
-	Port:      5432,
-	User:      "tao",
-	Password:  "123456qwe",
-	SSL:       "disable",
-	TimeZone:  "Asia/Shanghai",
-	RunAfters: []string{},
+// Config 总配置，实现 tao.MultiConfig 接口
+type Config struct {
+	tao.BaseMultiConfig[InstanceConfig]
+	RunAfters []string `json:"run_after,omitempty" yaml:"run_after,omitempty"`
+}
+
+var defaultInstance = &InstanceConfig{
+	Host:     "localhost",
+	Port:     5432,
+	User:     "tao",
+	Password: "123456qwe",
+	SSL:      "disable",
+	TimeZone: "Asia/Shanghai",
 }
 
 // Name of Config
-func (p *Config) Name() string {
+func (c *Config) Name() string {
 	return ConfigKey
 }
 
 // ValidSelf with some default values
-func (p *Config) ValidSelf() {
-	if p.Host == "" {
-		p.Host = defaultPostgres.Host
-	}
-	if p.Port == 0 {
-		p.Port = defaultPostgres.Port
-	}
-	if p.User == "" {
-		p.User = defaultPostgres.User
-	}
-	if p.Password == "" {
-		p.Password = defaultPostgres.Password
-	}
-	if p.SSL == "" {
-		p.SSL = defaultPostgres.SSL
-	}
-	if p.TimeZone == "" {
-		p.TimeZone = defaultPostgres.TimeZone
-	}
-	if p.RunAfters == nil {
-		p.RunAfters = defaultPostgres.RunAfters
+func (c *Config) ValidSelf() {
+	for name, instance := range c.Instances {
+		if instance.Host == "" {
+			instance.Host = defaultInstance.Host
+		}
+		if instance.Port == 0 {
+			instance.Port = defaultInstance.Port
+		}
+		if instance.User == "" {
+			instance.User = defaultInstance.User
+		}
+		if instance.Password == "" {
+			instance.Password = defaultInstance.Password
+		}
+		if instance.SSL == "" {
+			instance.SSL = defaultInstance.SSL
+		}
+		if instance.TimeZone == "" {
+			instance.TimeZone = defaultInstance.TimeZone
+		}
+		c.Instances[name] = instance
 	}
 }
 
 // ToTask transform itself to Task
-func (p *Config) ToTask() tao.Task {
+func (c *Config) ToTask() tao.Task {
 	return tao.NewTask(
 		ConfigKey,
 		func(ctx context.Context, param tao.Parameter) (tao.Parameter, error) {
-			// non-block check
 			select {
 			case <-ctx.Done():
 				return param, tao.NewError(tao.ContextCanceled, "%s: context has been canceled", ConfigKey)
 			default:
 			}
-			// JOB code run after RunAfters, you can just do nothing here
-			db, err := DB.DB()
-			if err != nil {
-				return param, err
+			for name := range c.Instances {
+				db, err := Factory.Get(name)
+				if err != nil {
+					return param, err
+				}
+				sqlDB, err := db.DB()
+				if err != nil {
+					return param, err
+				}
+				if err := sqlDB.Ping(); err != nil {
+					return param, err
+				}
 			}
-
-			err = db.Ping()
-			return param, err
+			return param, nil
 		})
 }
 
 // RunAfter defines pre task names
-func (p *Config) RunAfter() []string {
-	return p.RunAfters
+func (c *Config) RunAfter() []string {
+	return c.RunAfters
 }
