@@ -56,7 +56,8 @@ func (c *Config) Name() string {
 
 // ValidSelf with some default values
 func (c *Config) ValidSelf() {
-	for name, instance := range c.Instances {
+	for i := range c.Instances {
+		instance := &c.Instances[i].Cfg
 		if instance.Host == "" {
 			instance.Host = defaultInstance.Host
 		}
@@ -75,7 +76,6 @@ func (c *Config) ValidSelf() {
 		if instance.TimeZone == "" {
 			instance.TimeZone = defaultInstance.TimeZone
 		}
-		c.Instances[name] = instance
 	}
 }
 
@@ -89,7 +89,8 @@ func (c *Config) ToTask() tao.Task {
 				return param, tao.NewError(tao.ContextCanceled, "%s: context has been canceled", ConfigKey)
 			default:
 			}
-			for name := range c.Instances {
+			for _, inst := range c.Instances {
+				name := inst.Name
 				db, err := Factory.Get(name)
 				if err != nil {
 					return param, err

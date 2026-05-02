@@ -24,14 +24,14 @@ import (
 func TestConfig(t *testing.T) {
 	p := &Config{
 		BaseMultiConfig: tao.BaseMultiConfig[InstanceConfig]{
-			Instances: map[string]InstanceConfig{
-				"default": {},
+			Instances: []tao.Instance[InstanceConfig]{
+				{Name: "default", Cfg: InstanceConfig{}},
 			},
 		},
 	}
 	p.ValidSelf()
 
-	instance := p.Instances["default"]
+	instance, _ := p.GetInstanceByName("default")
 	assert.Equal(t, "localhost", instance.Host)
 	assert.Equal(t, 5432, instance.Port)
 	assert.Equal(t, "tao", instance.User)
