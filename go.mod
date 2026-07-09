@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/stretchr/testify v1.11.1
-	github.com/taouniverse/tao v0.2.1
+	github.com/taouniverse/tao v0.2.3
 	gorm.io/driver/postgres v1.3.10
 	gorm.io/gorm v1.25.11
 )

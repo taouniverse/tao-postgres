@@ -178,7 +178,7 @@ make down
 
 ```bash
 # 1. 启动 PostgreSQL
-docker-compose up -d
+docker compose up -d
 
 # 2. 运行单实例测试
 go test -v ./...
@@ -187,7 +187,7 @@ go test -v ./...
 TAO_TEST_MULTI_INSTANCE=true go test -v ./...
 
 # 4. 停止 PostgreSQL
-docker-compose down
+docker compose down
 ```
 
 ## 开发指南
